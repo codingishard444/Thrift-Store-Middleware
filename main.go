@@ -24,7 +24,7 @@ var (
 	mongoLogsColl *mongo.Collection
 )
 
-var dangerousChars = regexp.MustCompile(`[;]`)
+var dangerousChars = regexp.MustCompile(`[;&*+#=<>-]`)
 
 func sanitizeGraphQLQuery(query string) string {
 	return dangerousChars.ReplaceAllString(query, "")
@@ -99,7 +99,6 @@ func initMongo() {
 		log.Fatalf("MongoDB connection error: %v", err)
 	}
 
-	// Optional: Ping the database
 	if err := client.Ping(ctx, nil); err != nil {
 		log.Fatalf("MongoDB ping failed: %v", err)
 	}
