@@ -47,7 +47,24 @@ func logToMongo(ctx context.Context, ip, raw, sanitized string) {
 func graphqlMiddleware(target *url.URL) http.HandlerFunc {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		resp.Header.Del("Access-Control-Allow-Origin")
+		resp.Header.Del("Access-Control-Allow-Methods")
+		resp.Header.Del("Access-Control-Allow-Headers")
+		resp.Header.Del("Access-Control-Allow-Credentials")
+		return nil
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		if r.Method != http.MethodPost || r.URL.Path != "/public" {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
