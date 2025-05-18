@@ -28,6 +28,13 @@ var (
 
 var dangerousChars = regexp.MustCompile(`[;&*+#=<>-]`)
 
+var rateLimitStore = make(map[string][]time.Time)
+
+const (
+	maxRequestsPerMinute = 20
+	rateLimitWindow      = time.Minute
+)
+
 func sanitizeGraphQLQuery(query string) string {
 	return dangerousChars.ReplaceAllString(query, "")
 }
@@ -56,6 +63,31 @@ func extractClientIP(remoteAddr string) string {
 		return "127.0.0.1"
 	}
 	return ip
+}
+
+func isRateLimited(ip string) bool {
+	now := time.Now()
+	requests := rateLimitStore[ip]
+
+	// Remove timestamps outside the current window
+	var recentRequests []time.Time
+	for _, t := range requests {
+		if now.Sub(t) <= rateLimitWindow {
+			recentRequests = append(recentRequests, t)
+		}
+	}
+
+	// Update the map with only recent requests
+	rateLimitStore[ip] = recentRequests
+
+	// Check if the IP exceeded the limit
+	if len(recentRequests) >= maxRequestsPerMinute {
+		return true
+	}
+
+	// Add this request timestamp
+	rateLimitStore[ip] = append(rateLimitStore[ip], now)
+	return false
 }
 
 func graphqlMiddleware(target *url.URL) http.HandlerFunc {
@@ -105,6 +137,10 @@ func graphqlMiddleware(target *url.URL) http.HandlerFunc {
 		r.Body = io.NopCloser(bytes.NewBuffer(newBody))
 		r.ContentLength = int64(len(newBody))
 		ip := extractClientIP(r.RemoteAddr)
+		if isRateLimited(ip) {
+			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+			return
+		}
 		go logToMongo(ctx, ip, originalQuery, cleanedQuery)
 
 		proxy.ServeHTTP(w, r)
