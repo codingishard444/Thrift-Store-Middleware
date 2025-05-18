@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -131,7 +132,7 @@ func main() {
 	initMongo()
 
 	target, _ := url.Parse("http://localhost:9090")
-
+	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/public", graphqlMiddleware(target))
 
 	log.Println("Go middleware proxy listening on http://localhost:8080")
