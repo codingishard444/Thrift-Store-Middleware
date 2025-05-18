@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -43,6 +44,18 @@ func logToMongo(ctx context.Context, ip, raw, sanitized string) {
 	if err != nil {
 		log.Printf("Error writing to MongoDB: %v", err)
 	}
+}
+
+func extractClientIP(remoteAddr string) string {
+	ip, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		log.Printf("Failed to split remote address: %v", err)
+		return remoteAddr
+	}
+	if ip == "::1" { // IPv6 Loopback Address
+		return "127.0.0.1"
+	}
+	return ip
 }
 
 func graphqlMiddleware(target *url.URL) http.HandlerFunc {
@@ -91,8 +104,8 @@ func graphqlMiddleware(target *url.URL) http.HandlerFunc {
 		newBody, _ := json.Marshal(payload)
 		r.Body = io.NopCloser(bytes.NewBuffer(newBody))
 		r.ContentLength = int64(len(newBody))
-
-		go logToMongo(ctx, r.RemoteAddr, originalQuery, cleanedQuery)
+		ip := extractClientIP(r.RemoteAddr)
+		go logToMongo(ctx, ip, originalQuery, cleanedQuery)
 
 		proxy.ServeHTTP(w, r)
 	}
