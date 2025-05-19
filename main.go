@@ -180,7 +180,12 @@ func initMongo() {
 func main() {
 	initMongo()
 
-	target, _ := url.Parse("http://localhost:9090")
+	// target, _ := url.Parse("http://localhost:9090")
+	targetStr := os.Getenv("BACKEND_URL")
+	target, err := url.Parse(targetStr)
+	if err != nil {
+		log.Fatalf("Invalid BACKEND_URL: %v", err)
+	}
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/public", graphqlMiddleware(target))
 
