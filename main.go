@@ -14,7 +14,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -148,10 +147,6 @@ func graphqlMiddleware(target *url.URL) http.HandlerFunc {
 }
 
 func initMongo() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
 
 	mongoURI := os.Getenv("MONGO_URI")
 	if mongoURI == "" {
