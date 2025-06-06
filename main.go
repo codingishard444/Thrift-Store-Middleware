@@ -31,7 +31,7 @@ var dangerousChars = regexp.MustCompile(`[;&*+#=<>-]`)
 var rateLimitStore = make(map[string][]time.Time)
 
 const (
-	maxRequestsPerMinute = 20
+	maxRequestsPerMinute = 50
 	rateLimitWindow      = time.Minute
 )
 
